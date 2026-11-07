@@ -19,3 +19,4 @@ backgrounds/*.png: generated with Higgsfield gpt_image_2_6 for this project (202
 models/Fighter.glb: female fighter generated with Higgsfield (gpt_image_2_6 -> image_to_3d -> 3d_rigging), fists baked in Blender (2026-11-08)
 models/MaleFighter.glb: male fighter generated with Higgsfield (gpt_image_2_6 -> image_to_3d -> 3d_rigging), fists baked in Blender (2026-11-08)
 sounds/*.mp3: kiai and hurt voices, Higgsfield seed_audio TTS (2026-11-08)
+models/Athena2.glb: new Athena generated with Higgsfield (gpt_image_2_6 -> image_to_3d -> 3d_rigging), fists baked in Blender (2026-11-08)
