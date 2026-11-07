@@ -35,6 +35,8 @@ const grid=MeshBuilder.CreateLineSystem('grid',{lines},scene);grid.isVisible=fal
 for(const z of [-8,8]){const b=MeshBuilder.CreateBox('boundary',{width:16,height:.12,depth:.12},scene);b.position.set(0,.06,z);b.material=mat('edge','#b8ab92');}
 for(const x of [-8,8]){const b=MeshBuilder.CreateBox('boundary',{width:.12,height:.12,depth:16},scene);b.position.set(x,.06,0);b.material=mat('edge','#b8ab92');}
 let audio, muted=false;
+// kiai on a strike, grunt when hit; male / female voice by character (Higgsfield seed_audio TTS clips)
+const clips={};function voice(f,kind){if(muted||!f)return;const name=kind+'_'+(characters[f.key]?.female?'f':'m');const c=(clips[name]??=new Audio('/sounds/'+name+'.mp3')).cloneNode();c.volume=.9;c.play().catch(()=>{});}
 function sound(hit=false,heavy=false){
  if(muted)return;
  try{audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume();const t=audio.currentTime;
@@ -49,7 +51,7 @@ let player,enemy,destination=null,over=false,paused=false,aiTimer=1.8,clock=0,ai
 async function fighter(name,color,x,z,key){const pivot=new TransformNode(name,scene);pivot.position.set(x,0,z);const ring=MeshBuilder.CreateTorus(name+'-ring',{diameter:.85,thickness:.04,tessellation:40},scene);ring.parent=pivot;ring.position.y=.025;ring.material=mat(name+'-color',color);ring.isPickable=false;return {pivot,visual:await createHuman(scene,pivot,key,shadows),key,hp:100,attack:null,cooldown:0,flash:0,ring,moving:false};}
 async function change(f,key){paused=true;keys.clear();$("status").textContent="인체 모델을 불러오는 중…";document.querySelectorAll("select").forEach(s=>s.disabled=true);try{const replacement=await createHuman(scene,f.pivot,key,shadows);f.visual.dispose();f.visual=replacement;f.key=key;reset();}catch(e){$("status").textContent="모델 로딩 실패 · 다시 선택해 주세요";console.error(e);}finally{document.querySelectorAll("select").forEach(s=>s.disabled=false);}}
 function face(f,other){const d=other.pivot.position.subtract(f.pivot.position);f.pivot.rotation.y=Math.atan2(d.x,d.z);}
-function attack(f,type){if(over||paused||!f||f.attack||f.cooldown>0)return;const other=f===player?enemy:player;face(f,other);f.attack={type,time:0,hit:false,heading:f.pivot.rotation.y};f.cooldown=moves[type].duration+.16;sound();if(f===player)destination=null;}
+function attack(f,type){if(over||paused||!f||f.attack||f.cooldown>0)return;const other=f===player?enemy:player;face(f,other);f.attack={type,time:0,hit:false,heading:f.pivot.rotation.y};f.cooldown=moves[type].duration+.16;sound();voice(f,'kiai');if(f===player)destination=null;}
 function clamp(f){f.pivot.position.x=Math.max(-7.2,Math.min(7.2,f.pivot.position.x));f.pivot.position.z=Math.max(-7.2,Math.min(7.2,f.pivot.position.z));}
 const effects=[];
 function burst(pos){const mesh=MeshBuilder.CreateSphere('hit',{diameter:.16,segments:8},scene);mesh.position.copyFrom(pos);const m=mat('spark','#ffd271');m.emissiveColor=Color3.FromHexString('#ffad42');mesh.material=m;mesh.isPickable=false;effects.push({mesh,time:.18});}
@@ -75,7 +77,7 @@ function stepAttack(f,other,dt){
  if(endpoint&&t>=.43&&t<=.64&&!a.hit){
   const centre=other.pivot.position;const dx=endpoint.x-centre.x,dz=endpoint.z-centre.z;
   // Actual fist/foot must intersect the opponent's body capsule.
-  if(Math.hypot(dx,dz)<=.34&&endpoint.y>=.68&&endpoint.y<=1.57){a.hit=true;other.hp=Math.max(0,other.hp-m.damage);other.flash=.35;burst(endpoint);sound(true,a.type!=='punch');$('status').textContent=(f===player?'플레이어':'컴퓨터')+' '+m.label+' 적중!';if(other.hp===0){over=true;f.attack=null;other.attack=null;f.visual.pose(clock,false,null);other.visual.pose(clock,false,null);$('status').textContent=f===player?'승리! 다시 대련으로 재시작하세요.':'컴퓨터 승리 · 다시 도전하세요.';}}
+  if(Math.hypot(dx,dz)<=.34&&endpoint.y>=.68&&endpoint.y<=1.57){a.hit=true;other.hp=Math.max(0,other.hp-m.damage);other.flash=.35;burst(endpoint);sound(true,a.type!=='punch');voice(other,'hurt');$('status').textContent=(f===player?'플레이어':'컴퓨터')+' '+m.label+' 적중!';if(other.hp===0){over=true;f.attack=null;other.attack=null;f.visual.pose(clock,false,null);other.visual.pose(clock,false,null);$('status').textContent=f===player?'승리! 다시 대련으로 재시작하세요.':'컴퓨터 승리 · 다시 도전하세요.';}}
  }
  if(t>=1){f.pivot.rotation.y=heading;f.attack=null;}
 }

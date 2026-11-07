@@ -1,16 +1,16 @@
 import {Vector3,Quaternion,TransformNode,ImportMeshAsync,Color3} from '@babylonjs/core';
 import '@babylonjs/loaders/glTF/index.js';
 export const characters={
- mpfbFemale:{name:'여성 파이터 · 스포츠웨어',file:'Fighter',tint:'#ffffff',plainBones:true},
- mpfbMale:{name:'MPFB 남성 · 캐주얼',file:'MPFB_male',tint:'#ffffff'},
+ mpfbFemale:{name:'여성 파이터 · 스포츠웨어',file:'Fighter',tint:'#ffffff',plainBones:true,female:true},
+ mpfbMale:{name:'남성 파이터 · 블랙 도복',file:'MaleFighter',tint:'#ffffff',plainBones:true},
  // higgsfield image-to-3D (Meshy rig): Mixamo bone names without the 'mixamorig:' prefix
  me:{name:'나 · 작업복 (도움말 영상 인물)',file:'Me',tint:'#ffffff',plainBones:true},
  zeus:{name:'제우스',file:'Zeus',tint:'#ffffff',plainBones:true},
- athena:{name:'아테나 · 여전사',file:'Athena',tint:'#ffffff',plainBones:true},
- chunli:{name:'여성 · 블루 (스타일형)',file:'HVGirl',tint:'#b8d4ff'},
+ athena:{name:'아테나 · 여전사',file:'Athena',tint:'#ffffff',plainBones:true,female:true},
+ chunli:{name:'여성 · 블루 (스타일형)',file:'HVGirl',tint:'#b8d4ff',female:true},
  boxer:{name:'남성 파이터 · 택티컬',file:'Soldier',tint:'#ffffff'},
  ninja:{name:'남성 파이터 · 나이트',file:'Soldier',tint:'#8394bd'},
- karate:{name:'여성 · 레드 (스타일형)',file:'HVGirl',tint:'#ffc2bd'}
+ karate:{name:'여성 · 레드 (스타일형)',file:'HVGirl',tint:'#ffc2bd',female:true}
 };
 export async function createHuman(scene,parent,key,shadows,options={}){
  const config=characters[key],root=new TransformNode('human-'+key,scene);
