@@ -16,3 +16,4 @@ studio.env: BabylonJS/Assets environmentSpecular.env, CC BY 4.0.
 Me.glb: generated with Higgsfield image-to-3D (Meshy) from an AI-generated presenter image (ANDON help video); auto-rigged, Mixamo-style bone names without prefix.
 Zeus.glb, Athena.glb: generated with Higgsfield image-to-3D (Tripo) from AI-generated images, turned to face front (tools/face_front.py) and auto-rigged (Meshy rigging).
 backgrounds/*.png: generated with Higgsfield gpt_image_2_6 for this project (2026-11-07)
+models/Fighter.glb: female fighter generated with Higgsfield (gpt_image_2_6 -> image_to_3d -> 3d_rigging), fists baked in Blender (2026-11-08)

@@ -1,7 +1,7 @@
 import {Vector3,Quaternion,TransformNode,ImportMeshAsync,Color3} from '@babylonjs/core';
 import '@babylonjs/loaders/glTF/index.js';
 export const characters={
- mpfbFemale:{name:'MPFB 여성 · 스포츠웨어',file:'MPFB_female',tint:'#ffffff'},
+ mpfbFemale:{name:'여성 파이터 · 스포츠웨어',file:'Fighter',tint:'#ffffff',plainBones:true},
  mpfbMale:{name:'MPFB 남성 · 캐주얼',file:'MPFB_male',tint:'#ffffff'},
  // higgsfield image-to-3D (Meshy rig): Mixamo bone names without the 'mixamorig:' prefix
  me:{name:'나 · 작업복 (도움말 영상 인물)',file:'Me',tint:'#ffffff',plainBones:true},
