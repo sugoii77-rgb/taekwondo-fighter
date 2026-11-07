@@ -1,0 +1,8 @@
+MPFB female and male fighters
+Created using MPFB 2.0.18 / MakeHuman Community and Blender 4.5.9 LTS.
+Base mesh, morph targets, skin, eyes, eyebrows, eyelashes, teeth, hair and clothing: MakeHuman system assets, CC0.
+Source: https://github.com/makehumancommunity/mpfb2
+Asset pack: https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
+MPFB program code: GPL-3.0-or-later. Generated character assets: CC0 (separate from program code).
+Modifications: custom proportions, athletic build, clothing fitting, PBR conversion, smoothing, Mixamo rig and GLB export.
+These are generic fighters, not official Chun-Li character models.

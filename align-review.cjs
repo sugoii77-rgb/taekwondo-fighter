@@ -1,0 +1,1 @@
+const fs=require('fs');let c=fs.readFileSync('src/main.js','utf8');c=c.replace('reset();paused=true;keys.clear();','reset();paused=true;keys.clear();enemy.pivot.position.z=.37;');fs.writeFileSync('src/main.js',c);
