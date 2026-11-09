@@ -47,11 +47,40 @@ function sound(hit=false,heavy=false){
 }
 
 const moves={punch:{duration:.5,reach:.57,damage:9,label:'주먹',height:1.3},kick:{duration:.8,reach:.85,damage:14,label:'앞차기',height:1.04},spin:{duration:1.05,reach:.85,damage:19,label:'돌려차기',height:1.04},side:{duration:.85,reach:.85,damage:17,label:'옆차기',height:1.0},back:{duration:1.25,reach:.85,damage:24,label:'뒤후려차기',height:1.2}};
-let player,enemy,destination=null,over=false,paused=false,aiTimer=1.8,clock=0,aiEnabled=true,motionSpeed=1;
-async function fighter(name,color,x,z,key){const pivot=new TransformNode(name,scene);pivot.position.set(x,0,z);const ring=MeshBuilder.CreateTorus(name+'-ring',{diameter:.85,thickness:.04,tessellation:40},scene);ring.parent=pivot;ring.position.y=.025;ring.material=mat(name+'-color',color);ring.isPickable=false;return {pivot,visual:await createHuman(scene,pivot,key,shadows),key,hp:100,attack:null,cooldown:0,flash:0,ring,moving:false};}
-async function change(f,key){paused=true;keys.clear();$("status").textContent="인체 모델을 불러오는 중…";document.querySelectorAll("select").forEach(s=>s.disabled=true);try{const replacement=await createHuman(scene,f.pivot,key,shadows);f.visual.dispose();f.visual=replacement;f.key=key;reset();}catch(e){$("status").textContent="모델 로딩 실패 · 다시 선택해 주세요";console.error(e);}finally{document.querySelectorAll("select").forEach(s=>s.disabled=false);}}
+let player,enemy,destination=null,over=false,paused=false,clock=0,aiEnabled=true,motionSpeed=1;
+let autoSparring=false,loadingModels=true,rematchTimer=0,roundNumber=1,pauseRevision=0;
+const AUTO_REMATCH_DELAY=3;
+function updateModeControls(){
+ $('auto').textContent=autoSparring?'자동 대련 끄기':'자동 대련 켜기';
+ $('auto').setAttribute('aria-pressed',String(autoSparring));
+ $('modeLabel').textContent=autoSparring?'자동 대련 · AI vs AI · '+roundNumber+'라운드':'수동 대련';
+ $('playerLabel').textContent=autoSparring?'PLAYER AI':'PLAYER';
+ document.body.dataset.auto=String(autoSparring);
+ $('ai').disabled=autoSparring||loadingModels;
+ $('ai').textContent=autoSparring?'양쪽 AI 공격 중':aiEnabled?'컴퓨터 공격 켬':'컴퓨터 공격 끔';
+ for(const button of document.querySelectorAll('[data-key], [data-attack]'))button.disabled=autoSparring||loadingModels;
+ for(const id of ['auto','pause','reset'])$(id).disabled=loadingModels;
+ for(const button of document.querySelectorAll('[data-phase]'))button.disabled=loadingModels;
+}
+function resetAiTimers(){for(const f of [player,enemy])if(f)f.aiTimer=.65+Math.random()*.8;}
+function finishMessage(){return player.hp===0?(autoSparring?'COMPUTER AI 승리':'컴퓨터 승리 · 다시 도전하세요.'):(autoSparring?'PLAYER AI 승리':'승리! 다시 대련으로 재시작하세요.');}
+function setAutoSparring(enabled){
+ if(loadingModels||!player||!enemy)return;
+ autoSparring=enabled;destination=null;keys.clear();rematchTimer=0;resetAiTimers();
+ if(autoSparring){roundNumber=1;if(over)reset();paused=false;$('pause').textContent='일시정지';}
+ updateModeControls();
+ $('status').textContent=over?finishMessage():autoSparring?'양쪽 AI가 자동으로 대련합니다 · 종료 후 3초 뒤 다음 라운드':'수동 조작으로 전환했습니다 · 이동키와 공격 버튼을 사용하세요';
+}
+async function fighter(name,color,x,z,key){const pivot=new TransformNode(name,scene);pivot.position.set(x,0,z);const ring=MeshBuilder.CreateTorus(name+'-ring',{diameter:.85,thickness:.04,tessellation:40},scene);ring.parent=pivot;ring.position.y=.025;ring.material=mat(name+'-color',color);ring.isPickable=false;return {pivot,visual:await createHuman(scene,pivot,key,shadows),key,hp:100,attack:null,cooldown:0,flash:0,ring,moving:false,aiTimer:1};}
+async function change(f,key){
+ if(loadingModels)return;const wasPaused=paused,previousKey=f.key,previousPauseRevision=pauseRevision;loadingModels=true;paused=true;keys.clear();destination=null;updateModeControls();
+ $('status').textContent='인체 모델을 불러오는 중…';document.querySelectorAll('select').forEach(s=>s.disabled=true);
+ try{const replacement=await createHuman(scene,f.pivot,key,shadows);f.visual.dispose();f.visual=replacement;f.key=key;loadingModels=false;reset();paused=wasPaused||pauseRevision!==previousPauseRevision;$('pause').textContent=paused?'대련 계속':'일시정지';}
+ catch(e){paused=wasPaused||pauseRevision!==previousPauseRevision;$(f===player?'playerCharacter':'enemyCharacter').value=previousKey;$('status').textContent='모델 로딩 실패 · 다시 선택해 주세요';console.error(e);}
+ finally{loadingModels=false;document.querySelectorAll('select').forEach(s=>s.disabled=false);updateModeControls();}
+}
 function face(f,other){const d=other.pivot.position.subtract(f.pivot.position);f.pivot.rotation.y=Math.atan2(d.x,d.z);}
-function attack(f,type){if(over||paused||!f||f.attack||f.cooldown>0)return;const other=f===player?enemy:player;face(f,other);f.attack={type,time:0,hit:false,heading:f.pivot.rotation.y};f.cooldown=moves[type].duration+.16;sound();voice(f,'kiai');if(f===player)destination=null;}
+function attack(f,type){if(over||paused||loadingModels||!f||f.attack||f.cooldown>0)return;const other=f===player?enemy:player;face(f,other);f.attack={type,time:0,hit:false,heading:f.pivot.rotation.y};f.cooldown=moves[type].duration+.16;sound();voice(f,'kiai');if(f===player)destination=null;}
 function clamp(f){f.pivot.position.x=Math.max(-7.2,Math.min(7.2,f.pivot.position.x));f.pivot.position.z=Math.max(-7.2,Math.min(7.2,f.pivot.position.z));}
 const effects=[];
 function burst(pos){const mesh=MeshBuilder.CreateSphere('hit',{diameter:.16,segments:8},scene);mesh.position.copyFrom(pos);const m=mat('spark','#ffd271');m.emissiveColor=Color3.FromHexString('#ffad42');mesh.material=m;mesh.isPickable=false;effects.push({mesh,time:.18});}
@@ -77,23 +106,24 @@ function stepAttack(f,other,dt){
  if(endpoint&&t>=.43&&t<=.64&&!a.hit){
   const centre=other.pivot.position;const dx=endpoint.x-centre.x,dz=endpoint.z-centre.z;
   // Actual fist/foot must intersect the opponent's body capsule.
-  if(Math.hypot(dx,dz)<=.34&&endpoint.y>=.68&&endpoint.y<=1.57){a.hit=true;other.hp=Math.max(0,other.hp-m.damage);other.flash=.35;burst(endpoint);sound(true,a.type!=='punch');voice(other,'hurt');$('status').textContent=(f===player?'플레이어':'컴퓨터')+' '+m.label+' 적중!';if(other.hp===0){over=true;f.attack=null;other.attack=null;f.visual.pose(clock,false,null);other.visual.pose(clock,false,null);$('status').textContent=f===player?'승리! 다시 대련으로 재시작하세요.':'컴퓨터 승리 · 다시 도전하세요.';}}
+  if(Math.hypot(dx,dz)<=.34&&endpoint.y>=.68&&endpoint.y<=1.57){a.hit=true;other.hp=Math.max(0,other.hp-m.damage);other.flash=.35;burst(endpoint);sound(true,a.type!=='punch');voice(other,'hurt');$('status').textContent=(f===player?'플레이어':'컴퓨터')+' '+m.label+' 적중!';if(other.hp===0){over=true;f.attack=null;other.attack=null;f.visual.pose(clock,false,null);other.visual.pose(clock,false,null);rematchTimer=autoSparring?AUTO_REMATCH_DELAY:0;$('status').textContent=finishMessage()+(autoSparring?' · 3초 뒤 다음 라운드':'');}}
  }
  if(t>=1){f.pivot.rotation.y=heading;f.attack=null;}
 }
 const keys=new Set(),relevant=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','j','k','l','u','i'];
-window.addEventListener('keydown',e=>{if(e.target instanceof HTMLSelectElement)return;const key=e.key.toLowerCase();if(relevant.includes(key)){e.preventDefault();keys.add(key);}if(!e.repeat){if(key==='j')attack(player,'punch');if(key==='k')attack(player,'kick');if(key==='l')attack(player,'spin');if(key==='u')attack(player,'side');if(key==='i')attack(player,'back');}});
-window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();paused=true;$('pause').textContent='대련 계속';});
-for(const button of document.querySelectorAll('[data-key]')){const key=button.dataset.key;button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(key);};button.onpointerup=button.onpointercancel=()=>keys.delete(key);}
-for(const button of document.querySelectorAll('[data-attack]'))button.onclick=()=>attack(player,button.dataset.attack);
-scene.onPointerObservable.add(info=>{if(info.type===PointerEventTypes.POINTERTAP&&info.event.button===0&&player&&!over&&!paused){const hit=scene.pick(scene.pointerX,scene.pointerY,m=>m===floor);if(hit?.hit){destination=hit.pickedPoint.clone();destination.y=0;}}});
+window.addEventListener('keydown',e=>{if(e.target instanceof HTMLSelectElement||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||autoSparring||loadingModels)return;const key=e.key.toLowerCase();if(relevant.includes(key)){e.preventDefault();keys.add(key);}if(!e.repeat){if(key==='j')attack(player,'punch');if(key==='k')attack(player,'kick');if(key==='l')attack(player,'spin');if(key==='u')attack(player,'side');if(key==='i')attack(player,'back');}});
+window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{pauseRevision++;keys.clear();paused=true;$('pause').textContent='대련 계속';});
+for(const button of document.querySelectorAll('[data-key]')){const key=button.dataset.key;button.onpointerdown=e=>{e.preventDefault();if(autoSparring||loadingModels)return;button.setPointerCapture(e.pointerId);keys.add(key);};button.onpointerup=button.onpointercancel=()=>keys.delete(key);}
+for(const button of document.querySelectorAll('[data-attack]'))button.onclick=()=>{if(!autoSparring&&!loadingModels)attack(player,button.dataset.attack);};
+scene.onPointerObservable.add(info=>{if(info.type===PointerEventTypes.POINTERTAP&&info.event.button===0&&player&&!over&&!paused&&!autoSparring&&!loadingModels){const hit=scene.pick(scene.pointerX,scene.pointerY,m=>m===floor);if(hit?.hit){destination=hit.pickedPoint.clone();destination.y=0;}}});
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'소리 켜기':'소리 끄기';};
-$('pause').onclick=()=>{paused=!paused;keys.clear();$('pause').textContent=paused?'대련 계속':'일시정지';};
-function reset(){if(!player||!enemy)return;for(const [f,z]of [[player,-.65],[enemy,.65]]){f.attack=null;f.cooldown=0;f.hp=100;f.pivot.position.set(0,0,z);f.visual.root.rotation.z=0;}face(player,enemy);face(enemy,player);player.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});enemy.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});destination=null;over=false;paused=false;aiTimer=2;keys.clear();$('pause').textContent='일시정지';$('status').textContent='공격하면 짧게 전진합니다 · 손과 발이 몸에 닿을 때 적중';}
-$('reset').onclick=reset;
-$('ai').onclick=()=>{aiEnabled=!aiEnabled;$('ai').textContent=aiEnabled?'컴퓨터 공격 켬':'컴퓨터 공격 끔';};
+$('pause').onclick=()=>{if(loadingModels)return;paused=!paused;keys.clear();$('pause').textContent=paused?'대련 계속':'일시정지';};
+function reset(nextRound=false){if(loadingModels||!player||!enemy)return;if(nextRound===true)roundNumber++;else roundNumber=1;rematchTimer=0;for(const [f,z]of [[player,-.65],[enemy,.65]]){f.attack=null;f.cooldown=0;f.hp=100;f.flash=0;f.moving=false;f.pivot.position.set(0,0,z);f.visual.root.rotation.z=0;}face(player,enemy);face(enemy,player);player.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});enemy.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});destination=null;over=false;paused=false;resetAiTimers();keys.clear();$('pause').textContent='일시정지';$('status').textContent=autoSparring?'자동 대련 · '+roundNumber+'라운드 · 종료 후 자동 재시작':'공격하면 짧게 전진합니다 · 손과 발이 몸에 닿을 때 적중';updateModeControls();}
+$('reset').onclick=()=>reset();
+$('auto').onclick=()=>setAutoSparring(!autoSparring);
+$('ai').onclick=()=>{if(autoSparring||loadingModels)return;aiEnabled=!aiEnabled;updateModeControls();};
 for(const button of document.querySelectorAll('[data-phase]'))button.onclick=()=>{
- reset();paused=true;keys.clear();enemy.pivot.position.z=.37;
+ if(loadingModels)return;autoSparring=false;reset();paused=true;keys.clear();enemy.pivot.position.z=.37;
  const type=$('reviewMove').value,progress=Number(button.dataset.phase);
  player.visual.pose(clock,false,{type,target:new Vector3(0,1.04,.83),progress});
  $('pause').textContent='대련 계속';$('status').textContent='동작 확인 · '+moves[type].label+' / '+button.textContent;
@@ -101,22 +131,29 @@ for(const button of document.querySelectorAll('[data-phase]'))button.onclick=()=
 $('slow').onclick=()=>{motionSpeed=motionSpeed===1?.35:1;$('slow').textContent=motionSpeed===1?'느리게 보기':'정상 속도';};
 for(const id of ['playerCharacter','enemyCharacter']){const select=$(id);for(const [key,value]of Object.entries(characters)){const option=document.createElement('option');option.value=key;option.textContent=value.name;select.append(option);}}
 $('playerCharacter').value='me';$('enemyCharacter').value='zeus';
-player=await fighter('player','#53edda',0,-.65,'me');enemy=await fighter('computer','#ff685c',0,.65,'zeus');reset();paused=true;document.getElementById("pause").textContent='대련 시작';
+updateModeControls();document.querySelectorAll('select').forEach(s=>s.disabled=true);
+player=await fighter('player','#53edda',0,-.65,'me');enemy=await fighter('computer','#ff685c',0,.65,'zeus');loadingModels=false;reset();paused=true;document.querySelectorAll('select').forEach(s=>s.disabled=false);document.getElementById("pause").textContent='대련 시작';
 $('playerCharacter').onchange=e=>change(player,e.target.value);$('enemyCharacter').onchange=e=>change(enemy,e.target.value);
+function stepAI(f,other,dt,canAttack=true){
+ const toward=other.pivot.position.subtract(f.pivot.position),distance=toward.length();
+ if(!f.attack){face(f,other);if(distance>.94){f.pivot.position.addInPlace(toward.normalize().scale(Math.min(1.25*dt,distance-.94)));f.moving=true;}}
+ f.aiTimer-=dt;
+ if(canAttack&&f.aiTimer<=0&&distance<1.7&&!f.attack&&f.cooldown<=0){attack(f,['punch','kick','spin','side','back'][Math.floor(Math.random()*5)]);f.aiTimer=1.4+Math.random()*.8;}
+}
 engine.runRenderLoop(()=>{
- const dt=Math.min(engine.getDeltaTime()/1000,.04)*motionSpeed;
+ const realDt=Math.min(engine.getDeltaTime()/1000,.1),dt=Math.min(realDt,.04)*motionSpeed;
  if(!paused){clock+=dt;for(const f of [player,enemy]){f.cooldown=Math.max(0,f.cooldown-dt);f.flash=Math.max(0,f.flash-dt);f.ring.scaling.setAll(f.flash>0?1.35:1);f.moving=false;}
  if(!over){
+  if(autoSparring){stepAI(player,enemy,dt);}else{
   let direction=Vector3.Zero();const forward=camera.target.subtract(camera.position);forward.y=0;forward.normalize();const right=new Vector3(forward.z,0,-forward.x);
   const v=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0),h=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
   if(v||h){destination=null;direction=forward.scale(v).add(right.scale(h)).normalize();}else if(destination){const d=destination.subtract(player.pivot.position);if(d.length()<.08)destination=null;else direction=d.normalize();}
   if(!player.attack){if(direction.lengthSquared()>0){player.pivot.rotation.y=Math.atan2(direction.x,direction.z);player.pivot.position.addInPlace(direction.scale(2.3*dt));player.moving=true;}else face(player,enemy);}
-  const toward=player.pivot.position.subtract(enemy.pivot.position),distance=toward.length();
-  if(!enemy.attack){face(enemy,player);if(distance>.94){enemy.pivot.position.addInPlace(toward.normalize().scale(1.25*dt));enemy.moving=true;}}
-  aiTimer-=dt;if(aiEnabled&&aiTimer<=0&&distance<1.7&&!enemy.attack){attack(enemy,['punch','kick','spin','side','back'][Math.floor(Math.random()*5)]);aiTimer=1.4+Math.random()*.8;}
+  }
+  stepAI(enemy,player,dt,autoSparring||aiEnabled);
   const separation=enemy.pivot.position.subtract(player.pivot.position),dist=separation.length();if(dist<.62){separation.normalize().scaleInPlace((.62-dist)*.5);enemy.pivot.position.addInPlace(separation);player.pivot.position.subtractInPlace(separation);}
-  clamp(player);clamp(enemy);stepAttack(player,enemy,dt);stepAttack(enemy,player,dt);
- }else{for(const f of [player,enemy])if(f.hp===0)f.visual.root.rotation.z=Math.min(1.2,f.visual.root.rotation.z+dt*2);}
+  clamp(player);clamp(enemy);stepAttack(player,enemy,dt);if(!over)stepAttack(enemy,player,dt);
+ }else{for(const f of [player,enemy])if(f.hp===0)f.visual.root.rotation.z=Math.min(1.2,f.visual.root.rotation.z+dt*2);if(autoSparring&&rematchTimer>0){rematchTimer=Math.max(0,rematchTimer-realDt);$('status').textContent=finishMessage()+' · '+Math.ceil(rematchTimer)+'초 뒤 다음 라운드';if(rematchTimer===0)reset(true);}}
  }
  $('playerHP').value=player.hp;$('enemyHP').value=enemy.hp;$('playerValue').textContent=player.hp;$('enemyValue').textContent=enemy.hp;
  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.time-=dt;e.mesh.scaling.scaleInPlace(1+dt*5);if(e.time<=0){e.mesh.material.dispose();e.mesh.dispose();effects.splice(i,1);}}
