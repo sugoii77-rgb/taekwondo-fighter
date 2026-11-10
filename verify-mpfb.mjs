@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NullEngine,Scene,TransformNode,Vector3} from '@babylonjs/core';
 import {createHuman} from './src/human-mpfb.js';
 const engine=new NullEngine(),scene=new Scene(engine),shadows={addShadowCaster(){}};
-for(const [key,file] of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2']]){
+for(const [key,file] of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2'],['chunli','ChunLi']]){
  const pivot=new TransformNode('test',scene);
  const human=await createHuman(scene,pivot,key,shadows,{source:new Uint8Array(fs.readFileSync('public/models/'+file+'.glb'))});
  assert(human.nodes.RightHand&&human.nodes.RightFoot,'Mixamo skeleton');
@@ -16,4 +16,4 @@ for(const [key,file] of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['m
  }
  human.dispose();pivot.dispose();
 }
-console.log('PASS: both MPFB humans load, move and make contact for all 3 strikes.');scene.dispose();engine.dispose();
+console.log('PASS: all 6 fighters load, move and make contact for all 5 strikes.');scene.dispose();engine.dispose();

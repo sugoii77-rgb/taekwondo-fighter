@@ -6,7 +6,7 @@ import {createHuman} from './src/human-mpfb.js';
 // support foot stays planted on the floor and nothing goes through the floor or turns NaN.
 const engine=new NullEngine(),scene=new Scene(engine),shadows={addShadowCaster(){}};
 const local=(pivot,node)=>{const c=[];for(let p=node;p;p=p.parent)c.push(p);for(let i=c.length-1;i>=0;i--)c[i].computeWorldMatrix(true);return Vector3.TransformCoordinates(node.getAbsolutePosition(),pivot.getWorldMatrix().clone().invert());};
-for(const [key,file]of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2']]){
+for(const [key,file]of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2'],['chunli','ChunLi']]){
  const pivot=new TransformNode(key,scene);
  const human=await createHuman(scene,pivot,key,shadows,{source:new Uint8Array(fs.readFileSync('public/models/'+file+'.glb'))});
  const n=human.nodes,feet=()=>['Left','Right'].map(s=>local(pivot,n[s+'Foot']));
@@ -42,4 +42,4 @@ for(const [key,file]of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me
  assert(torso()<before-.05,key+' recoil');
  human.dispose();pivot.dispose();
 }
-console.log('PASS: bounce, hip pivot, torso twist/lean and recoil on all 5 fighters; support foot planted, nothing below the floor.');scene.dispose();engine.dispose();
+console.log('PASS: bounce, hip pivot, torso twist/lean and recoil on all 6 fighters; support foot planted, nothing below the floor.');scene.dispose();engine.dispose();

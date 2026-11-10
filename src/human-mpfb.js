@@ -7,7 +7,7 @@ export const characters={
  me:{name:'나 · 작업복 (도움말 영상 인물)',file:'Me',tint:'#ffffff',plainBones:true},
  zeus:{name:'제우스',file:'Zeus',tint:'#ffffff',plainBones:true},
  athena:{name:'아테나 · 여전사',file:'Athena2',tint:'#ffffff',plainBones:true,female:true},
- chunli:{name:'여성 · 블루 (스타일형)',file:'HVGirl',tint:'#b8d4ff',female:true},
+ chunli:{name:'춘리 · 블루 치파오',file:'ChunLi',tint:'#ffffff',female:true},
  boxer:{name:'남성 파이터 · 택티컬',file:'Soldier',tint:'#ffffff'},
  ninja:{name:'남성 파이터 · 나이트',file:'Soldier',tint:'#8394bd'},
  karate:{name:'여성 · 레드 (스타일형)',file:'HVGirl',tint:'#ffc2bd',female:true}

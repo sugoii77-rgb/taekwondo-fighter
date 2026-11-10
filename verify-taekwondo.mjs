@@ -4,7 +4,7 @@ import {NullEngine,Scene,TransformNode,Vector3} from '@babylonjs/core';
 import {createHuman} from './src/human-mpfb.js';
 const engine=new NullEngine(),scene=new Scene(engine),shadows={addShadowCaster(){}};
 let count=0;
-for(const [key,file]of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2']]){
+for(const [key,file]of [['mpfbFemale','Fighter'],['mpfbMale','MaleFighter'],['me','Me'],['zeus','Zeus'],['athena','Athena2'],['chunli','ChunLi']]){
  const pivot=new TransformNode(key,scene);
  const human=await createHuman(scene,pivot,key,shadows,{source:new Uint8Array(fs.readFileSync('public/models/'+file+'.glb'))});
  for(const yaw of [0,Math.PI/2,Math.PI]){pivot.rotation.y=yaw;pivot.computeWorldMatrix(true);
