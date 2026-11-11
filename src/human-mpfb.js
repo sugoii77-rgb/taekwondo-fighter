@@ -7,6 +7,8 @@ export const characters={
  // higgsfield image-to-3D (Meshy rig): Mixamo bone names without the 'mixamorig:' prefix
  me:{name:'나 · 작업복 (도움말 영상 인물)',file:'Me',tint:'#ffffff',plainBones:true},
  zeus:{name:'제우스',file:'Zeus',tint:'#ffffff',plainBones:true},
+ peterPan:{name:'피터팬 · 녹색 모험복',file:'PeterPan',tint:'#ffffff',plainBones:true,height:1.78},
+ boy:{name:'소년 · 네이비 티셔츠',file:'Boy',tint:'#ffffff',plainBones:true,height:1.45},
  athena:{name:'아테나 · 여전사',file:'Athena2',tint:'#ffffff',plainBones:true,female:true},
  chunli:{name:'춘리 · 블루 치파오',file:'ChunLi',tint:'#ffffff',female:true},
  claudeChunli:{name:'클로드 × 춘리 · 포니테일',file:'Claude-ChunLi-Ponytail',tint:'#ffffff',female:true,ponytail:true},
@@ -16,6 +18,7 @@ export const characters={
 };
 export async function createHuman(scene,parent,key,shadows,options={}){
  const config=characters[key],root=new TransformNode('human-'+key,scene);
+ const modelHeight=config.height??1.78,bodyScale=modelHeight/1.78;
  // Imported glTF humans face -Z; the game's facing direction is +Z.
  const orient=new TransformNode('model-facing',scene);orient.parent=root;orient.rotation.y=config.file==="Soldier"?Math.PI:0;
  let loaded;
@@ -23,7 +26,7 @@ export async function createHuman(scene,parent,key,shadows,options={}){
  const model=loaded.meshes[0];
  loaded.animationGroups.forEach(g=>g.stop());
  const bounds=model.getHierarchyBoundingVectors(true),height=bounds.max.y-bounds.min.y;
- model.scaling.scaleInPlace(1.78/height);model.position.y=-bounds.min.y*1.78/height;
+ model.scaling.scaleInPlace(modelHeight/height);model.position.y=-bounds.min.y*modelHeight/height;
  model.parent=orient;root.parent=parent;
  const materials=new Set();
  for(const mesh of loaded.meshes){mesh.isPickable=false;if(mesh.getTotalVertices()){shadows.addShadowCaster(mesh);mesh.receiveShadows=true;}if(mesh.material){materials.add(mesh.material);if(mesh.material.albedoColor)mesh.material.albedoColor.multiplyInPlace(Color3.FromHexString(config.tint));}}
@@ -149,13 +152,14 @@ export async function createHuman(scene,parent,key,shadows,options={}){
  }
  // place the root: yaw about the planted left foot (the pivot), plus a forward shift
  function placeRoot(yaw,forward){
+  forward*=bodyScale;
   const p=feetRest.Left||Vector3.Zero(),c=Math.cos(yaw),s=Math.sin(yaw);
   root.rotation.set(0,yaw,root.rotation.z);
   root.position.set(p.x-(p.x*c+p.z*s),0,p.z-(-p.x*s+p.z*c)+forward);
   refresh();
  }
  // guard / counter-swing targets are authored in the body's own frame; they turn with the root
- const bodyTarget=v=>{const c=Math.cos(root.rotation.y),s=Math.sin(root.rotation.y);return new Vector3(root.position.x+v.x*c+v.z*s,root.position.y+v.y,root.position.z-v.x*s+v.z*c);};
+ const bodyTarget=v=>{v=v.scale(bodyScale);const c=Math.cos(root.rotation.y),s=Math.sin(root.rotation.y);return new Vector3(root.position.x+v.x*c+v.z*s,root.position.y+v.y,root.position.z-v.x*s+v.z*c);};
 
  function pose(time,moving,attack,hurt=0){
   restBones();
@@ -217,7 +221,7 @@ export async function createHuman(scene,parent,key,shadows,options={}){
   // keep the support foot on the floor (bent knees lower the body), then lift: bounce or heel rise
   const feet=kick?['Left']:['Left','Right'];
   const low=Math.min(...feet.map(s=>nodes[s+'Foot']?toLocal(world(nodes[s+'Foot'])).y:footY));
-  root.position.y+=footY-low+bounce+heel;
+  root.position.y+=footY-low+(bounce+heel)*bodyScale;
   if(kick&&anchor){const f=toLocal(world(nodes.LeftFoot));root.position.x+=anchor.x-f.x;root.position.z+=anchor.z-f.z;} // the support foot pivots in place, it never slides
   refresh();
 
@@ -229,13 +233,13 @@ export async function createHuman(scene,parent,key,shadows,options={}){
  }
  let anchor=null;pose(0,false,null);anchor=toLocal(world(nodes.LeftFoot)); // the lead foot's place in the stance
  // how far forward this body's strikes reach (legs and pivot differ per model); the attacker stands this far off
- const reach={punch:toLocal(pose(0,false,{type:'punch',target:new Vector3(.24,1.3,3),progress:.5})).z};
+ const reach={punch:toLocal(pose(0,false,{type:'punch',target:new Vector3(.24*bodyScale,1.3*bodyScale,3),progress:.5})).z};
  for(const type of ['kick','spin','side','back'])reach[type]=toLocal(pose(0,false,{type,progress:.52})).z;
  pose(0,false,null);
  // Initialize after scaling and reach-calibration poses. Keep each fighter's import scoped:
  // both fighters may have identically named Ponytail_01..05 nodes.
  const secondaryMotion=config.ponytail?createPonytailDynamics(loaded,{Vector3,Quaternion}):null;
- return {root,pose,debug,reach,model:config.file,nodes,secondaryMotion,
+ return {root,pose,debug,reach,model:config.file,nodes,secondaryMotion,bodyScale,height:modelHeight,
   updateSecondaryMotion(dt){secondaryMotion?.update(dt);},
   resetSecondaryMotion(){secondaryMotion?.reset();},
   dispose(){secondaryMotion?.dispose();loaded.animationGroups.forEach(g=>g.dispose());loaded.skeletons.forEach(s=>s.dispose());root.dispose(false);materials.forEach(m=>m.dispose(true,true));}
