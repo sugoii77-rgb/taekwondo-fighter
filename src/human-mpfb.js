@@ -1,5 +1,6 @@
 import {Vector3,Quaternion,TransformNode,ImportMeshAsync,Color3} from '@babylonjs/core';
 import '@babylonjs/loaders/glTF/index.js';
+import {createPonytailDynamics} from './ponytail-dynamics.mjs';
 export const characters={
  mpfbFemale:{name:'여성 파이터 · 스포츠웨어',file:'Fighter',tint:'#ffffff',plainBones:true,female:true},
  mpfbMale:{name:'남성 파이터 · 블랙 도복',file:'MaleFighter',tint:'#ffffff',plainBones:true},
@@ -8,6 +9,7 @@ export const characters={
  zeus:{name:'제우스',file:'Zeus',tint:'#ffffff',plainBones:true},
  athena:{name:'아테나 · 여전사',file:'Athena2',tint:'#ffffff',plainBones:true,female:true},
  chunli:{name:'춘리 · 블루 치파오',file:'ChunLi',tint:'#ffffff',female:true},
+ claudeChunli:{name:'클로드 × 춘리 · 포니테일',file:'Claude-ChunLi-Ponytail',tint:'#ffffff',female:true,ponytail:true},
  boxer:{name:'남성 파이터 · 택티컬',file:'Soldier',tint:'#ffffff'},
  ninja:{name:'남성 파이터 · 나이트',file:'Soldier',tint:'#8394bd'},
  karate:{name:'여성 · 레드 (스타일형)',file:'HVGirl',tint:'#ffc2bd',female:true}
@@ -230,7 +232,14 @@ export async function createHuman(scene,parent,key,shadows,options={}){
  const reach={punch:toLocal(pose(0,false,{type:'punch',target:new Vector3(.24,1.3,3),progress:.5})).z};
  for(const type of ['kick','spin','side','back'])reach[type]=toLocal(pose(0,false,{type,progress:.52})).z;
  pose(0,false,null);
- return {root,pose,debug,reach,model:config.file,nodes,dispose(){loaded.animationGroups.forEach(g=>g.dispose());loaded.skeletons.forEach(s=>s.dispose());root.dispose(false);materials.forEach(m=>m.dispose(true,true));}};
+ // Initialize after scaling and reach-calibration poses. Keep each fighter's import scoped:
+ // both fighters may have identically named Ponytail_01..05 nodes.
+ const secondaryMotion=config.ponytail?createPonytailDynamics(loaded,{Vector3,Quaternion}):null;
+ return {root,pose,debug,reach,model:config.file,nodes,secondaryMotion,
+  updateSecondaryMotion(dt){secondaryMotion?.update(dt);},
+  resetSecondaryMotion(){secondaryMotion?.reset();},
+  dispose(){secondaryMotion?.dispose();loaded.animationGroups.forEach(g=>g.dispose());loaded.skeletons.forEach(s=>s.dispose());root.dispose(false);materials.forEach(m=>m.dispose(true,true));}
+ }; 
 }
 
 

@@ -118,7 +118,7 @@ for(const button of document.querySelectorAll('[data-attack]'))button.onclick=()
 scene.onPointerObservable.add(info=>{if(info.type===PointerEventTypes.POINTERTAP&&info.event.button===0&&player&&!over&&!paused&&!autoSparring&&!loadingModels){const hit=scene.pick(scene.pointerX,scene.pointerY,m=>m===floor);if(hit?.hit){destination=hit.pickedPoint.clone();destination.y=0;}}});
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'소리 켜기':'소리 끄기';};
 $('pause').onclick=()=>{if(loadingModels)return;paused=!paused;keys.clear();$('pause').textContent=paused?'대련 계속':'일시정지';};
-function reset(nextRound=false){if(loadingModels||!player||!enemy)return;if(nextRound===true)roundNumber++;else roundNumber=1;rematchTimer=0;for(const [f,z]of [[player,-.65],[enemy,.65]]){f.attack=null;f.cooldown=0;f.hp=100;f.flash=0;f.moving=false;f.pivot.position.set(0,0,z);f.visual.root.rotation.z=0;}face(player,enemy);face(enemy,player);player.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});enemy.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});destination=null;over=false;paused=false;resetAiTimers();keys.clear();$('pause').textContent='일시정지';$('status').textContent=autoSparring?'자동 대련 · '+roundNumber+'라운드 · 종료 후 자동 재시작':'공격하면 짧게 전진합니다 · 손과 발이 몸에 닿을 때 적중';updateModeControls();}
+function reset(nextRound=false){if(loadingModels||!player||!enemy)return;if(nextRound===true)roundNumber++;else roundNumber=1;rematchTimer=0;for(const [f,z]of [[player,-.65],[enemy,.65]]){f.attack=null;f.cooldown=0;f.hp=100;f.flash=0;f.moving=false;f.pivot.position.set(0,0,z);f.visual.root.rotation.z=0;}face(player,enemy);face(enemy,player);player.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});enemy.visual.pose(0,false,{type:"punch",target:new Vector3(.24,1.29,.31),progress:0});for(const f of [player,enemy])f.visual.resetSecondaryMotion?.();destination=null;over=false;paused=false;resetAiTimers();keys.clear();$('pause').textContent='일시정지';$('status').textContent=autoSparring?'자동 대련 · '+roundNumber+'라운드 · 종료 후 자동 재시작':'공격하면 짧게 전진합니다 · 손과 발이 몸에 닿을 때 적중';updateModeControls();}
 $('reset').onclick=()=>reset();
 $('auto').onclick=()=>setAutoSparring(!autoSparring);
 $('ai').onclick=()=>{if(autoSparring||loadingModels)return;aiEnabled=!aiEnabled;updateModeControls();};
@@ -126,6 +126,7 @@ for(const button of document.querySelectorAll('[data-phase]'))button.onclick=()=
  if(loadingModels)return;autoSparring=false;reset();paused=true;keys.clear();enemy.pivot.position.z=.37;
  const type=$('reviewMove').value,progress=Number(button.dataset.phase);
  player.visual.pose(clock,false,{type,target:new Vector3(0,1.04,.83),progress});
+ for(const f of [player,enemy])f.visual.resetSecondaryMotion?.();
  $('pause').textContent='대련 계속';$('status').textContent='동작 확인 · '+moves[type].label+' / '+button.textContent;
 };
 $('slow').onclick=()=>{motionSpeed=motionSpeed===1?.35:1;$('slow').textContent=motionSpeed===1?'느리게 보기':'정상 속도';};
@@ -157,6 +158,9 @@ engine.runRenderLoop(()=>{
  }
  $('playerHP').value=player.hp;$('enemyHP').value=enemy.hp;$('playerValue').textContent=player.hp;$('enemyValue').textContent=enemy.hp;
  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.time-=dt;e.mesh.scaling.scaleInPlace(1+dt*5);if(e.time<=0){e.mesh.material.dispose();e.mesh.dispose();effects.splice(i,1);}}
+ // Secondary motion follows the final combat pose, using the same simulation time.
+ // Pause, motion review, blur and model loading must not accumulate spring energy.
+ if(!paused&&!loadingModels)for(const f of [player,enemy])f.visual.updateSecondaryMotion?.(dt);
  camera.target.copyFrom(player.pivot.position.add(new Vector3(0,1,0)));scene.render();
 });
 window.addEventListener('resize',()=>engine.resize());
